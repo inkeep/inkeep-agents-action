@@ -1,0 +1,49 @@
+# Inkeep Agent Trigger - Generic Template
+# This is a minimal template for triggering an Inkeep agent on PR events.
+# Customize the trigger conditions and inputs for your specific use case.
+#
+# Setup:
+# 1. Install the Inkeep GitHub App on your repository
+# 2. Create a trigger in Inkeep and get your trigger URL
+# 3. Add INKEEP_TRIGGER_URL as a repository secret
+# 4. (Optional) Add INKEEP_SIGNING_SECRET if you configured signing
+
+name: Inkeep Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+  # Uncomment to also trigger on PR comments:
+  # issue_comment:
+  #   types: [created]
+
+  # Uncomment to trigger on PR reviews:
+  # pull_request_review:
+  #   types: [submitted]
+
+# Required for OIDC authentication with Inkeep GitHub App
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
+jobs:
+  trigger-agent:
+    # For issue_comment events, only run if the comment is on a PR
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Inkeep Agent
+        uses: inkeep/agents-action@v1
+        with:
+          trigger-url: ${{ secrets.INKEEP_TRIGGER_URL }}
+
+          # Optional: HMAC signing secret for payload verification
+          signing-secret: ${{ secrets.INKEEP_SIGNING_SECRET }}
+
+          # Optional: Only trigger for specific file patterns
+          # path-filter: 'src/**'
+
+          # Optional: Include full file contents in payload
+          # include-file-contents: 'true'

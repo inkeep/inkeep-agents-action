@@ -1,0 +1,61 @@
+# Inkeep Docs Writer Agent
+# This workflow triggers a documentation writer agent when:
+# 1. A PR is opened or updated
+# 2. Someone mentions @your-bot in a PR comment
+#
+# Setup:
+# 1. Install the Inkeep GitHub App on your repository
+# 2. Create a trigger in Inkeep and get your trigger URL
+# 3. Add INKEEP_TRIGGER_URL as a repository secret
+# 4. (Optional) Add INKEEP_SIGNING_SECRET if you configured signing on your trigger
+
+name: Docs Writer Agent
+
+on:
+  # Trigger on PR creation and updates
+  pull_request:
+    types: [opened, synchronize]
+
+  # Trigger on PR comments mentioning the bot
+  issue_comment:
+    types: [created]
+
+# Required for OIDC authentication with Inkeep GitHub App
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
+jobs:
+  # Job for PR events
+  trigger-on-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Docs Writer Agent
+        uses: inkeep/agents-action@v1
+        with:
+          trigger-url: ${{ secrets.INKEEP_TRIGGER_URL }}
+          signing-secret: ${{ secrets.INKEEP_SIGNING_SECRET }}
+          # Only trigger for docs changes (remove to trigger on all changes)
+          path-filter: 'docs/**'
+
+  # Job for comment events (only on PRs, with bot mention)
+  trigger-on-comment:
+    # Only run if:
+    # 1. This is an issue_comment event
+    # 2. The comment is on a PR (not a regular issue)
+    # 3. The comment mentions the bot (customize @your-docs-bot to your bot's username)
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@your-docs-bot')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Docs Writer Agent
+        uses: inkeep/agents-action@v1
+        with:
+          trigger-url: ${{ secrets.INKEEP_TRIGGER_URL }}
+          signing-secret: ${{ secrets.INKEEP_SIGNING_SECRET }}
+          # Include file contents for better context when responding to comments
+          include-file-contents: 'true'

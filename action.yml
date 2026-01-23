@@ -1,0 +1,35 @@
+name: 'Inkeep Agents Trigger'
+description: 'Trigger Inkeep agents from GitHub events with rich PR context (diffs, files, comments)'
+author: 'Inkeep'
+
+branding:
+  icon: 'zap'
+  color: 'purple'
+
+inputs:
+  trigger-url:
+    description: 'The Inkeep agent trigger webhook URL'
+    required: true
+  signing-secret:
+    description: 'HMAC signing secret for payload verification (optional)'
+    required: false
+  github-token:
+    description: 'Override GitHub token. If provided, skips OIDC authentication flow'
+    required: false
+  path-filter:
+    description: 'Glob pattern to filter which changed files trigger the action (e.g., "docs/**")'
+    required: false
+  include-file-contents:
+    description: 'Whether to include full file contents for changed files (default: false)'
+    required: false
+    default: 'false'
+
+outputs:
+  invocation-id:
+    description: 'The trigger invocation ID from the Inkeep API'
+  conversation-id:
+    description: 'The conversation ID created by the agent'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
