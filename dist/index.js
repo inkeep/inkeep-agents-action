@@ -24091,11 +24091,11 @@ var require_brace_expansion = __commonJS({
 });
 
 // src/index.ts
-var core5 = __toESM(require_core(), 1);
+var core5 = __toESM(require_core());
 
 // src/auth/token.ts
-var core = __toESM(require_core(), 1);
-var TOKEN_EXCHANGE_ENDPOINT = "https://api.inkeep.com/api/github/token-exchange";
+var core = __toESM(require_core());
+var TOKEN_EXCHANGE_ENDPOINT = "https://inkeep-content-writer.ngrok.io/api/github/token-exchange";
 var OIDC_AUDIENCE = "inkeep-agents-action";
 async function getGitHubToken(overrideToken) {
   if (overrideToken) {
@@ -24134,8 +24134,8 @@ async function getGitHubToken(overrideToken) {
 }
 
 // src/github/context.ts
-var github = __toESM(require_github(), 1);
-var core2 = __toESM(require_core(), 1);
+var github = __toESM(require_github());
+var core2 = __toESM(require_core());
 var import_promises = require("fs/promises");
 async function parseEventContext() {
   const eventName = process.env.GITHUB_EVENT_NAME;
@@ -24205,8 +24205,8 @@ async function parseEventContext() {
 }
 
 // src/github/pr.ts
-var core3 = __toESM(require_core(), 1);
-var github2 = __toESM(require_github(), 1);
+var core3 = __toESM(require_core());
+var github2 = __toESM(require_github());
 
 // node_modules/minimatch/dist/esm/index.js
 var import_brace_expansion = __toESM(require_brace_expansion(), 1);
@@ -25704,7 +25704,7 @@ async function fetchPRContext(token, owner, repo, prNumber, options = {}) {
 }
 
 // src/trigger/client.ts
-var core4 = __toESM(require_core(), 1);
+var core4 = __toESM(require_core());
 var import_crypto = require("crypto");
 
 // node_modules/zod/v3/external.js

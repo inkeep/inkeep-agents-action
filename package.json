@@ -2,7 +2,6 @@
   "name": "@inkeep/agents-action",
   "version": "0.1.0",
   "description": "GitHub Action to trigger Inkeep agents from GitHub events",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "node build.mjs",
