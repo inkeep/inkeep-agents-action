@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { getGitHubToken } from './auth/token.js';
+import { getGitHubToken, getProjectIdFromTriggerUrl } from './auth/token.js';
 import { parseEventContext } from './github/context.js';
 import { fetchPRContext } from './github/pr.js';
 import { sendTrigger } from './trigger/client.js';
@@ -22,8 +22,10 @@ async function run(): Promise<void> {
       `Processing ${eventContext.event.type} event for PR #${eventContext.pullRequestNumber}`
     );
 
+    const projectId = getProjectIdFromTriggerUrl(triggerUrl);
+
     // Get GitHub token (via OIDC or override)
-    const githubToken = await getGitHubToken(githubTokenOverride);
+    const githubToken = await getGitHubToken(projectId, githubTokenOverride);
 
     // Fetch PR context (diff, files, comments)
     const prContext = await fetchPRContext(

@@ -24095,9 +24095,9 @@ var core5 = __toESM(require_core());
 
 // src/auth/token.ts
 var core = __toESM(require_core());
-var TOKEN_EXCHANGE_ENDPOINT = "https://inkeep-content-writer.ngrok.io/api/github/token-exchange";
+var TOKEN_EXCHANGE_ENDPOINT = "https://inkeep-content-writer.ngrok.io/work-apps/github/token-exchange";
 var OIDC_AUDIENCE = "inkeep-agents-action";
-async function getGitHubToken(overrideToken) {
+async function getGitHubToken(projectId, overrideToken) {
   if (overrideToken) {
     core.info("Using provided github-token override");
     return overrideToken;
@@ -24109,12 +24109,16 @@ async function getGitHubToken(overrideToken) {
       'Failed to get OIDC token. Ensure the workflow has "id-token: write" permission.'
     );
   }
+  const request = {
+    oidc_token: oidcToken,
+    project_id: projectId
+  };
   const response = await fetch(TOKEN_EXCHANGE_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ oidc_token: oidcToken })
+    body: JSON.stringify(request)
   });
   if (!response.ok) {
     const errorBody = await response.text();
@@ -24131,6 +24135,15 @@ async function getGitHubToken(overrideToken) {
   const data = await response.json();
   core.info(`Authenticated as GitHub App for repository: ${data.repository}`);
   return data.token;
+}
+function getProjectIdFromTriggerUrl(triggerUrl) {
+  const url = new URL(triggerUrl);
+  const parts = url.pathname.split("/");
+  const projectIndex = parts.indexOf("projects");
+  if (projectIndex === -1 || projectIndex + 1 >= parts.length) {
+    throw new Error(`Invalid trigger URL format: could not extract project ID from ${triggerUrl}`);
+  }
+  return parts[projectIndex + 1];
 }
 
 // src/github/context.ts
@@ -29886,7 +29899,8 @@ async function run() {
     core5.info(
       `Processing ${eventContext.event.type} event for PR #${eventContext.pullRequestNumber}`
     );
-    const githubToken = await getGitHubToken(githubTokenOverride);
+    const projectId = getProjectIdFromTriggerUrl(triggerUrl);
+    const githubToken = await getGitHubToken(projectId, githubTokenOverride);
     const prContext = await fetchPRContext(
       githubToken,
       eventContext.repository.owner,

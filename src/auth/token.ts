@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 
-const TOKEN_EXCHANGE_ENDPOINT = 'https://inkeep-content-writer.ngrok.io/api/github/token-exchange';
+const TOKEN_EXCHANGE_ENDPOINT = 'https://inkeep-content-writer.ngrok.io/work-apps/github/token-exchange';
 const OIDC_AUDIENCE = 'inkeep-agents-action';
 
 export interface TokenExchangeResponse {
@@ -10,6 +10,11 @@ export interface TokenExchangeResponse {
   installation_id: number;
 }
 
+export interface TokenExchangeRequest {
+  oidc_token: string;
+  project_id: string;
+}
+
 /**
  * Get a GitHub token for API access.
  *
@@ -17,7 +22,7 @@ export interface TokenExchangeResponse {
  * Otherwise, performs OIDC token exchange with Inkeep API to get
  * a GitHub App installation token.
  */
-export async function getGitHubToken(overrideToken?: string): Promise<string> {
+export async function getGitHubToken(projectId: string, overrideToken?: string): Promise<string> {
   // If override token provided, use it directly
   if (overrideToken) {
     core.info('Using provided github-token override');
@@ -36,12 +41,16 @@ export async function getGitHubToken(overrideToken?: string): Promise<string> {
   }
 
   // Exchange OIDC token for GitHub App installation token
+  const request: TokenExchangeRequest = {
+    oidc_token: oidcToken,
+    project_id: projectId,
+  };
   const response = await fetch(TOKEN_EXCHANGE_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ oidc_token: oidcToken }),
+    body: JSON.stringify(request),
   });
 
   if (!response.ok) {
@@ -65,4 +74,16 @@ export async function getGitHubToken(overrideToken?: string): Promise<string> {
   core.info(`Authenticated as GitHub App for repository: ${data.repository}`);
 
   return data.token;
+}
+
+export function getProjectIdFromTriggerUrl(triggerUrl: string): string {
+  // URL format: https://domain/run/tenants/:tenantId/projects/:projectId/...
+  const url = new URL(triggerUrl);
+  const parts = url.pathname.split('/');
+  // parts: ["", "run", "tenants", tenantId, "projects", projectId, ...]
+  const projectIndex = parts.indexOf('projects');
+  if (projectIndex === -1 || projectIndex + 1 >= parts.length) {
+    throw new Error(`Invalid trigger URL format: could not extract project ID from ${triggerUrl}`);
+  }
+  return parts[projectIndex + 1];
 }
