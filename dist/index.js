@@ -24095,7 +24095,7 @@ var core5 = __toESM(require_core());
 
 // src/auth/token.ts
 var core = __toESM(require_core());
-var TOKEN_EXCHANGE_ENDPOINT = "https://inkeep-content-writer.ngrok.io/work-apps/github/token-exchange";
+var TOKEN_EXCHANGE_ENDPOINT = "https://inkeep-agents.ngrok.io/work-apps/github/token-exchange";
 var OIDC_AUDIENCE = "inkeep-agents-action";
 async function getGitHubToken(projectId, overrideToken) {
   if (overrideToken) {
