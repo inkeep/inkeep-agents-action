@@ -12,7 +12,6 @@ async function run(): Promise<void> {
     const signingSecret = core.getInput('signing-secret') || undefined;
     const githubTokenOverride = core.getInput('github-token') || undefined;
     const pathFilter = core.getInput('path-filter') || undefined;
-    const includeFileContents = core.getInput('include-file-contents') === 'true';
 
     core.info('Starting Inkeep Agents Action');
 
@@ -35,7 +34,6 @@ async function run(): Promise<void> {
       eventContext.pullRequestNumber!,
       {
         pathFilter,
-        includeContents: includeFileContents,
         triggerCommentId: eventContext.triggerCommentId,
       }
     );
@@ -54,7 +52,6 @@ async function run(): Promise<void> {
       repository: eventContext.repository,
       pullRequest: prContext.pullRequest,
       sender: eventContext.sender,
-      diff: prContext.diff,
       changedFiles: prContext.changedFiles,
       comments: prContext.comments,
       triggerComment: prContext.triggerComment,

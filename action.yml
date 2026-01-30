@@ -19,10 +19,6 @@ inputs:
   path-filter:
     description: 'Glob pattern to filter which changed files trigger the action (e.g., "docs/**")'
     required: false
-  include-file-contents:
-    description: 'Whether to include full file contents for changed files (default: false)'
-    required: false
-    default: 'false'
 
 outputs:
   invocation-id:

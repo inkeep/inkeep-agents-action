@@ -70,7 +70,6 @@ export const TriggerPayloadSchema = z.object({
   repository: RepositorySchema,
   pullRequest: PullRequestSchema,
   sender: GitHubUserSchema,
-  diff: z.string(),
   changedFiles: z.array(ChangedFileSchema),
   comments: z.array(CommentSchema),
   triggerComment: CommentSchema.optional(), // The specific comment that triggered this (for issue_comment events)

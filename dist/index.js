@@ -25586,19 +25586,7 @@ async function fetchPullRequest(octokit, owner, repo, prNumber) {
     updatedAt: pr.updated_at
   };
 }
-async function fetchDiff(octokit, owner, repo, prNumber) {
-  core3.info(`Fetching PR #${prNumber} diff`);
-  const { data: diff } = await octokit.rest.pulls.get({
-    owner,
-    repo,
-    pull_number: prNumber,
-    mediaType: {
-      format: "diff"
-    }
-  });
-  return diff;
-}
-async function fetchChangedFiles(octokit, owner, repo, prNumber, headSha, pathFilter, includeContents) {
+async function fetchChangedFiles(octokit, owner, repo, prNumber, headSha, pathFilter, includeContents = false, includePatches = false) {
   core3.info(`Fetching PR #${prNumber} changed files`);
   const files = [];
   for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listFiles, {
@@ -25616,7 +25604,7 @@ async function fetchChangedFiles(octokit, owner, repo, prNumber, headSha, pathFi
         status: file.status,
         additions: file.additions,
         deletions: file.deletions,
-        patch: file.patch,
+        patch: includePatches ? file.patch : void 0,
         previousPath: file.previous_filename
       };
       if (includeContents && file.status !== "removed") {
@@ -25694,8 +25682,7 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
 async function fetchPRContext(token, owner, repo, prNumber, options = {}) {
   const octokit = github2.getOctokit(token);
   const pullRequest = await fetchPullRequest(octokit, owner, repo, prNumber);
-  const [diff, changedFiles, { comments, triggerComment }] = await Promise.all([
-    fetchDiff(octokit, owner, repo, prNumber),
+  const [changedFiles, { comments, triggerComment }] = await Promise.all([
     fetchChangedFiles(
       octokit,
       owner,
@@ -25709,7 +25696,6 @@ async function fetchPRContext(token, owner, repo, prNumber, options = {}) {
   ]);
   return {
     pullRequest,
-    diff,
     changedFiles,
     comments,
     triggerComment
@@ -29824,7 +29810,6 @@ var TriggerPayloadSchema = external_exports.object({
   repository: RepositorySchema,
   pullRequest: PullRequestSchema,
   sender: GitHubUserSchema,
-  diff: external_exports.string(),
   changedFiles: external_exports.array(ChangedFileSchema),
   comments: external_exports.array(CommentSchema),
   triggerComment: CommentSchema.optional()
@@ -29893,7 +29878,6 @@ async function run() {
     const signingSecret = core5.getInput("signing-secret") || void 0;
     const githubTokenOverride = core5.getInput("github-token") || void 0;
     const pathFilter = core5.getInput("path-filter") || void 0;
-    const includeFileContents = core5.getInput("include-file-contents") === "true";
     core5.info("Starting Inkeep Agents Action");
     const eventContext = await parseEventContext();
     core5.info(
@@ -29908,7 +29892,6 @@ async function run() {
       eventContext.pullRequestNumber,
       {
         pathFilter,
-        includeContents: includeFileContents,
         triggerCommentId: eventContext.triggerCommentId
       }
     );
@@ -29923,7 +29906,6 @@ async function run() {
       repository: eventContext.repository,
       pullRequest: prContext.pullRequest,
       sender: eventContext.sender,
-      diff: prContext.diff,
       changedFiles: prContext.changedFiles,
       comments: prContext.comments,
       triggerComment: prContext.triggerComment

@@ -7,7 +7,6 @@ type Octokit = ReturnType<typeof github.getOctokit>;
 
 export interface PRContext {
   pullRequest: PullRequest;
-  diff: string;
   changedFiles: ChangedFile[];
   comments: Comment[];
   triggerComment?: Comment;
@@ -93,7 +92,8 @@ async function fetchChangedFiles(
   prNumber: number,
   headSha: string,
   pathFilter?: string,
-  includeContents?: boolean
+  includeContents: boolean = false,
+  includePatches: boolean = false
 ): Promise<ChangedFile[]> {
   core.info(`Fetching PR #${prNumber} changed files`);
 
@@ -117,7 +117,7 @@ async function fetchChangedFiles(
         status: file.status as ChangedFile['status'],
         additions: file.additions,
         deletions: file.deletions,
-        patch: file.patch,
+        patch: includePatches ? file.patch : undefined,
         previousPath: file.previous_filename,
       };
 
@@ -240,8 +240,7 @@ export async function fetchPRContext(
   const pullRequest = await fetchPullRequest(octokit, owner, repo, prNumber);
 
   // Fetch remaining data in parallel
-  const [diff, changedFiles, { comments, triggerComment }] = await Promise.all([
-    fetchDiff(octokit, owner, repo, prNumber),
+  const [changedFiles, { comments, triggerComment }] = await Promise.all([
     fetchChangedFiles(
       octokit,
       owner,
@@ -256,7 +255,6 @@ export async function fetchPRContext(
 
   return {
     pullRequest,
-    diff,
     changedFiles,
     comments,
     triggerComment,
