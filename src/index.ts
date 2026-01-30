@@ -57,6 +57,13 @@ async function run(): Promise<void> {
       triggerComment: prContext.triggerComment,
     };
 
+    if (prContext.triggerComment?.author.login === 'inkeep[bot]') {
+      core.info('Trigger comment was made by Inkeep bot. Skipping trigger.');
+      core.setOutput('skipped', 'true');
+      core.setOutput('skip-reason', 'inkeep-bot-comment');
+      return;
+    }
+
     // Send to trigger URL
     const response = await sendTrigger(triggerUrl, payload, signingSecret);
 
