@@ -215,6 +215,34 @@ async function fetchComments(
     }
   }
 
+  // Fetch review summaries (approve/request changes with body text)
+  for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listReviews, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  })) {
+    for (const review of response.data) {
+      // Only include reviews that have a body
+      if (review.body) {
+        const mappedComment: Comment = {
+          id: review.id,
+          body: review.body,
+          author: mapUser(review.user!),
+          createdAt: review.submitted_at ?? new Date().toISOString(), // submitted_at may be null for pending reviews
+          type: 'review_summary',
+          state: review.state as Comment['state'],
+        };
+
+        comments.push(mappedComment);
+
+        if (triggerCommentId && review.id === triggerCommentId) {
+          triggerComment = mappedComment;
+        }
+      }
+    }
+  }
+
   core.info(`Found ${comments.length} comments`);
 
   return { comments, triggerComment };

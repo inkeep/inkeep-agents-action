@@ -25676,6 +25676,30 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
       }
     }
   }
+  for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listReviews, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100
+  })) {
+    for (const review of response.data) {
+      if (review.body) {
+        const mappedComment = {
+          id: review.id,
+          body: review.body,
+          author: mapUser(review.user),
+          createdAt: review.submitted_at ?? (/* @__PURE__ */ new Date()).toISOString(),
+          // submitted_at may be null for pending reviews
+          type: "review_summary",
+          state: review.state
+        };
+        comments.push(mappedComment);
+        if (triggerCommentId && review.id === triggerCommentId) {
+          triggerComment = mappedComment;
+        }
+      }
+    }
+  }
   core3.info(`Found ${comments.length} comments`);
   return { comments, triggerComment };
 }
@@ -29795,11 +29819,13 @@ var CommentSchema = external_exports.object({
   body: external_exports.string(),
   author: GitHubUserSchema,
   createdAt: external_exports.string(),
-  updatedAt: external_exports.string(),
-  type: external_exports.enum(["issue", "review"]),
-  // For review comments
+  updatedAt: external_exports.string().optional(),
+  type: external_exports.enum(["issue", "review", "review_summary"]),
+  // For review comments (inline code comments)
   path: external_exports.string().optional(),
-  line: external_exports.number().optional()
+  line: external_exports.number().optional(),
+  // For review summaries
+  state: external_exports.enum(["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]).optional()
 });
 var GitHubEventSchema = external_exports.object({
   type: external_exports.string(),
@@ -29910,6 +29936,12 @@ async function run() {
       comments: prContext.comments,
       triggerComment: prContext.triggerComment
     };
+    if (prContext.triggerComment?.author.login === "inkeep[bot]") {
+      core5.info("Trigger comment was made by Inkeep bot. Skipping trigger.");
+      core5.setOutput("skipped", "true");
+      core5.setOutput("skip-reason", "inkeep-bot-comment");
+      return;
+    }
     const response = await sendTrigger(triggerUrl, payload, signingSecret);
     core5.setOutput("invocation-id", response.invocationId);
     core5.setOutput("conversation-id", response.conversationId);
