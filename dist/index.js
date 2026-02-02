@@ -29904,6 +29904,7 @@ async function run() {
     const signingSecret = core5.getInput("signing-secret") || void 0;
     const githubTokenOverride = core5.getInput("github-token") || void 0;
     const pathFilter = core5.getInput("path-filter") || void 0;
+    const prTitleRegex = core5.getInput("pr-title-regex") || void 0;
     core5.info("Starting Inkeep Agents Action");
     const eventContext = await parseEventContext();
     core5.info(
@@ -29926,6 +29927,15 @@ async function run() {
       core5.setOutput("skipped", "true");
       core5.setOutput("skip-reason", "no-matching-files");
       return;
+    }
+    if (prTitleRegex) {
+      const regex = new RegExp(prTitleRegex);
+      if (!regex.test(prContext.pullRequest.title)) {
+        core5.info(`PR title "${prContext.pullRequest.title}" does not match regex "${prTitleRegex}". Skipping trigger.`);
+        core5.setOutput("skipped", "true");
+        core5.setOutput("skip-reason", "title-no-match");
+        return;
+      }
     }
     const payload = {
       event: eventContext.event,

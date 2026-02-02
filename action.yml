@@ -19,6 +19,9 @@ inputs:
   path-filter:
     description: 'Glob pattern to filter which changed files trigger the action (e.g., "docs/**")'
     required: false
+  pr-title-regex:
+    description: 'Regex to filter which PR titles trigger the action (e.g., "^\\[docs\\]")'
+    required: false
 
 outputs:
   invocation-id:

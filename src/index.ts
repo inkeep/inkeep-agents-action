@@ -12,6 +12,7 @@ async function run(): Promise<void> {
     const signingSecret = core.getInput('signing-secret') || undefined;
     const githubTokenOverride = core.getInput('github-token') || undefined;
     const pathFilter = core.getInput('path-filter') || undefined;
+    const prTitleRegex = core.getInput('pr-title-regex') || undefined;
 
     core.info('Starting Inkeep Agents Action');
 
@@ -44,6 +45,17 @@ async function run(): Promise<void> {
       core.setOutput('skipped', 'true');
       core.setOutput('skip-reason', 'no-matching-files');
       return;
+    }
+
+    // Check if PR title matches regex filter
+    if (prTitleRegex) {
+      const regex = new RegExp(prTitleRegex);
+      if (!regex.test(prContext.pullRequest.title)) {
+        core.info(`PR title "${prContext.pullRequest.title}" does not match regex "${prTitleRegex}". Skipping trigger.`);
+        core.setOutput('skipped', 'true');
+        core.setOutput('skip-reason', 'title-no-match');
+        return;
+      }
     }
 
     // Build the trigger payload
