@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 
-const TOKEN_EXCHANGE_ENDPOINT = 'https://inkeep-agents.ngrok.io/work-apps/github/token-exchange';
+const TOKEN_EXCHANGE_ENDPOINT = 'https://api.pilot.inkeep.com/work-apps/github/token-exchange';
 const OIDC_AUDIENCE = 'inkeep-agents-action';
 
 export interface TokenExchangeResponse {
