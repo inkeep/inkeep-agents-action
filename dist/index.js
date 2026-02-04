@@ -25703,6 +25703,35 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
   core3.info(`Found ${comments.length} comments`);
   return { comments, triggerComment };
 }
+async function checkBotPRExists(token, owner, repo, prNumber, botLogin = "inkeep[bot]") {
+  const octokit = github2.getOctokit(token);
+  core3.info(`Checking for existing bot PRs referencing PR #${prNumber}`);
+  try {
+    for await (const response of octokit.paginate.iterator(octokit.rest.issues.listEventsForTimeline, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100
+    })) {
+      for (const event of response.data) {
+        if (event.event === "cross-referenced" && "source" in event && event.source?.issue?.user?.login === botLogin && event.source?.issue?.pull_request) {
+          const issue = event.source.issue;
+          core3.info(`Found existing bot PR: #${issue.number} - ${issue.title}`);
+          return {
+            number: issue.number,
+            title: issue.title,
+            url: issue.html_url,
+            state: issue.state,
+            createdAt: issue.created_at
+          };
+        }
+      }
+    }
+  } catch (error) {
+    core3.warning(`Failed to check for bot PR references: ${error}`);
+  }
+  return null;
+}
 async function fetchPRContext(token, owner, repo, prNumber, options = {}) {
   const octokit = github2.getOctokit(token);
   const pullRequest = await fetchPullRequest(octokit, owner, repo, prNumber);
@@ -29912,6 +29941,20 @@ async function run() {
     );
     const projectId = getProjectIdFromTriggerUrl(triggerUrl);
     const githubToken = await getGitHubToken(projectId, githubTokenOverride);
+    const existingBotPR = await checkBotPRExists(
+      githubToken,
+      eventContext.repository.owner,
+      eventContext.repository.name,
+      eventContext.pullRequestNumber
+    );
+    if (existingBotPR) {
+      core5.info(`Bot already created PR #${existingBotPR.number} referencing this PR. Skipping trigger.`);
+      core5.setOutput("skipped", "true");
+      core5.setOutput("skip-reason", "bot-pr-exists");
+      core5.setOutput("existing-bot-pr-number", existingBotPR.number.toString());
+      core5.setOutput("existing-bot-pr-url", existingBotPR.url);
+      return;
+    }
     const prContext = await fetchPRContext(
       githubToken,
       eventContext.repository.owner,

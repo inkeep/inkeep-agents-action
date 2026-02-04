@@ -248,6 +248,64 @@ async function fetchComments(
   return { comments, triggerComment };
 }
 
+export interface BotPRReference {
+  number: number;
+  title: string;
+  url: string;
+  state: string;
+  createdAt: string;
+}
+
+/**
+ * Check if the Inkeep bot has already created a PR that references this one
+ */
+export async function checkBotPRExists(
+  token: string,
+  owner: string,
+  repo: string,
+  prNumber: number,
+  botLogin: string = 'inkeep[bot]'
+): Promise<BotPRReference | null> {
+  const octokit = github.getOctokit(token);
+  
+  core.info(`Checking for existing bot PRs referencing PR #${prNumber}`);
+
+  try {
+    // Fetch timeline events to find cross-references
+    for await (const response of octokit.paginate.iterator(octokit.rest.issues.listEventsForTimeline, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100,
+    })) {
+      for (const event of response.data) {
+        // Look for cross-referenced events from our bot
+        if (
+          event.event === 'cross-referenced' &&
+          'source' in event &&
+          event.source?.issue?.user?.login === botLogin &&
+          event.source?.issue?.pull_request // It's a PR, not just an issue
+        ) {
+          const issue = event.source.issue;
+          core.info(`Found existing bot PR: #${issue.number} - ${issue.title}`);
+          
+          return {
+            number: issue.number,
+            title: issue.title,
+            url: issue.html_url,
+            state: issue.state,
+            createdAt: issue.created_at,
+          };
+        }
+      }
+    }
+  } catch (error) {
+    core.warning(`Failed to check for bot PR references: ${error}`);
+  }
+
+  return null;
+}
+
 /**
  * Fetch all PR context: details, diff, files, and comments
  */

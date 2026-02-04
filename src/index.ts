@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { getGitHubToken, getProjectIdFromTriggerUrl } from './auth/token.js';
 import { parseEventContext } from './github/context.js';
-import { fetchPRContext } from './github/pr.js';
+import { fetchPRContext, checkBotPRExists } from './github/pr.js';
 import { sendTrigger } from './trigger/client.js';
 import type { TriggerPayload } from './types/index.js';
 
@@ -26,6 +26,24 @@ async function run(): Promise<void> {
 
     // Get GitHub token (via OIDC or override)
     const githubToken = await getGitHubToken(projectId, githubTokenOverride);
+
+    // Check if bot has already created a PR referencing this one
+    const existingBotPR = await checkBotPRExists(
+      githubToken,
+      eventContext.repository.owner,
+      eventContext.repository.name,
+      eventContext.pullRequestNumber!
+    );
+
+    if (existingBotPR) {
+      core.info(`Bot already created PR #${existingBotPR.number} referencing this PR. Skipping trigger.`);
+      core.setOutput('skipped', 'true');
+      core.setOutput('skip-reason', 'bot-pr-exists');
+      core.setOutput('existing-bot-pr-number', existingBotPR.number.toString());
+      core.setOutput('existing-bot-pr-url', existingBotPR.url);
+      return;
+    }
+    
 
     // Fetch PR context (diff, files, comments)
     const prContext = await fetchPRContext(
