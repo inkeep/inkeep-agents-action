@@ -24095,9 +24095,10 @@ var core5 = __toESM(require_core());
 
 // src/auth/token.ts
 var core = __toESM(require_core());
-var TOKEN_EXCHANGE_ENDPOINT = "https://api.pilot.inkeep.com/work-apps/github/token-exchange";
+var DEFAULT_API_BASE_URL = "https://api.pilot.inkeep.com";
+var TOKEN_EXCHANGE_PATH = "/work-apps/github/token-exchange";
 var OIDC_AUDIENCE = "inkeep-agents-action";
-async function getGitHubToken(projectId, overrideToken) {
+async function getGitHubToken(projectId, overrideToken, apiBaseUrl) {
   if (overrideToken) {
     core.info("Using provided github-token override");
     return overrideToken;
@@ -24109,11 +24110,16 @@ async function getGitHubToken(projectId, overrideToken) {
       'Failed to get OIDC token. Ensure the workflow has "id-token: write" permission.'
     );
   }
+  const baseUrl = apiBaseUrl || DEFAULT_API_BASE_URL;
+  const tokenExchangeUrl = `${baseUrl.replace(/\/$/, "")}${TOKEN_EXCHANGE_PATH}`;
+  if (apiBaseUrl) {
+    core.info(`Using custom API base URL: ${baseUrl}`);
+  }
   const request = {
     oidc_token: oidcToken,
     project_id: projectId
   };
-  const response = await fetch(TOKEN_EXCHANGE_ENDPOINT, {
+  const response = await fetch(tokenExchangeUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -29934,13 +29940,14 @@ async function run() {
     const githubTokenOverride = core5.getInput("github-token") || void 0;
     const pathFilter = core5.getInput("path-filter") || void 0;
     const prTitleRegex = core5.getInput("pr-title-regex") || void 0;
+    const apiBaseUrl = core5.getInput("api-base-url") || void 0;
     core5.info("Starting Inkeep Agents Action");
     const eventContext = await parseEventContext();
     core5.info(
       `Processing ${eventContext.event.type} event for PR #${eventContext.pullRequestNumber}`
     );
     const projectId = getProjectIdFromTriggerUrl(triggerUrl);
-    const githubToken = await getGitHubToken(projectId, githubTokenOverride);
+    const githubToken = await getGitHubToken(projectId, githubTokenOverride, apiBaseUrl);
     const existingBotPR = await checkBotPRExists(
       githubToken,
       eventContext.repository.owner,

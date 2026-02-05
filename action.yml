@@ -22,6 +22,9 @@ inputs:
   pr-title-regex:
     description: 'Regex to filter which PR titles trigger the action (e.g., "^\\[docs\\]")'
     required: false
+  api-base-url:
+    description: 'Override Inkeep API base URL (for testing only, e.g., "https://your-ngrok-url.ngrok.io")'
+    required: false
 
 outputs:
   invocation-id:

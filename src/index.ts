@@ -13,6 +13,7 @@ async function run(): Promise<void> {
     const githubTokenOverride = core.getInput('github-token') || undefined;
     const pathFilter = core.getInput('path-filter') || undefined;
     const prTitleRegex = core.getInput('pr-title-regex') || undefined;
+    const apiBaseUrl = core.getInput('api-base-url') || undefined;
 
     core.info('Starting Inkeep Agents Action');
 
@@ -25,7 +26,7 @@ async function run(): Promise<void> {
     const projectId = getProjectIdFromTriggerUrl(triggerUrl);
 
     // Get GitHub token (via OIDC or override)
-    const githubToken = await getGitHubToken(projectId, githubTokenOverride);
+    const githubToken = await getGitHubToken(projectId, githubTokenOverride, apiBaseUrl);
 
     // Check if bot has already created a PR referencing this one
     const existingBotPR = await checkBotPRExists(

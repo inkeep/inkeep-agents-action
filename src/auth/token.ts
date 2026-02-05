@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 
-const TOKEN_EXCHANGE_ENDPOINT = 'https://api.pilot.inkeep.com/work-apps/github/token-exchange';
+const DEFAULT_API_BASE_URL = 'https://api.pilot.inkeep.com';
+const TOKEN_EXCHANGE_PATH = '/work-apps/github/token-exchange';
 const OIDC_AUDIENCE = 'inkeep-agents-action';
 
 export interface TokenExchangeResponse {
@@ -22,7 +23,11 @@ export interface TokenExchangeRequest {
  * Otherwise, performs OIDC token exchange with Inkeep API to get
  * a GitHub App installation token.
  */
-export async function getGitHubToken(projectId: string, overrideToken?: string): Promise<string> {
+export async function getGitHubToken(
+  projectId: string,
+  overrideToken?: string,
+  apiBaseUrl?: string
+): Promise<string> {
   // If override token provided, use it directly
   if (overrideToken) {
     core.info('Using provided github-token override');
@@ -40,12 +45,20 @@ export async function getGitHubToken(projectId: string, overrideToken?: string):
     );
   }
 
+  // Build the token exchange endpoint URL
+  const baseUrl = apiBaseUrl || DEFAULT_API_BASE_URL;
+  const tokenExchangeUrl = `${baseUrl.replace(/\/$/, '')}${TOKEN_EXCHANGE_PATH}`;
+  
+  if (apiBaseUrl) {
+    core.info(`Using custom API base URL: ${baseUrl}`);
+  }
+
   // Exchange OIDC token for GitHub App installation token
   const request: TokenExchangeRequest = {
     oidc_token: oidcToken,
     project_id: projectId,
   };
-  const response = await fetch(TOKEN_EXCHANGE_ENDPOINT, {
+  const response = await fetch(tokenExchangeUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
