@@ -25566,6 +25566,9 @@ function mapUser(user) {
     url: user.html_url
   };
 }
+function isBot(login) {
+  return login.endsWith("[bot]");
+}
 async function fetchPullRequest(octokit, owner, repo, prNumber) {
   core3.info(`Fetching PR #${prNumber} details`);
   const { data: pr } = await octokit.rest.pulls.get({
@@ -25653,10 +25656,13 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         updatedAt: comment.updated_at,
         type: "issue"
       };
-      comments.push(mappedComment);
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
       }
+      if (isBot(comment.user.login)) {
+        continue;
+      }
+      comments.push(mappedComment);
     }
   }
   for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listReviewComments, {
@@ -25676,10 +25682,13 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         path: comment.path,
         line: comment.line || comment.original_line
       };
-      comments.push(mappedComment);
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
       }
+      if (isBot(comment.user.login)) {
+        continue;
+      }
+      comments.push(mappedComment);
     }
   }
   for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listReviews, {
@@ -25699,10 +25708,13 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
           type: "review_summary",
           state: review.state
         };
-        comments.push(mappedComment);
         if (triggerCommentId && review.id === triggerCommentId) {
           triggerComment = mappedComment;
         }
+        if (isBot(review.user.login)) {
+          continue;
+        }
+        comments.push(mappedComment);
       }
     }
   }
