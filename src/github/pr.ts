@@ -21,6 +21,10 @@ function mapUser(user: { login: string; id: number; avatar_url: string; html_url
   };
 }
 
+function isBot(login: string): boolean {
+  return login.endsWith('[bot]');
+}
+
 /**
  * Fetch pull request details
  */
@@ -180,11 +184,17 @@ async function fetchComments(
         type: 'issue',
       };
 
-      comments.push(mappedComment);
-
+      // Track trigger comment even if from bot
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
       }
+
+      // Filter out bot comments
+      if (isBot(comment.user!.login)) {
+        continue;
+      }
+
+      comments.push(mappedComment);
     }
   }
 
@@ -207,11 +217,17 @@ async function fetchComments(
         line: comment.line || comment.original_line,
       };
 
-      comments.push(mappedComment);
-
+      // Track trigger comment even if from bot
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
       }
+
+      // Filter out bot comments
+      if (isBot(comment.user!.login)) {
+        continue;
+      }
+
+      comments.push(mappedComment);
     }
   }
 
@@ -234,11 +250,17 @@ async function fetchComments(
           state: review.state as Comment['state'],
         };
 
-        comments.push(mappedComment);
-
+        // Track trigger comment even if from bot
         if (triggerCommentId && review.id === triggerCommentId) {
           triggerComment = mappedComment;
         }
+
+        // Filter out bot comments
+        if (isBot(review.user!.login)) {
+          continue;
+        }
+
+        comments.push(mappedComment);
       }
     }
   }
