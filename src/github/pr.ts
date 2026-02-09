@@ -12,12 +12,9 @@ export interface PRContext {
   triggerComment?: Comment;
 }
 
-function mapUser(user: { login: string; id: number; avatar_url: string; html_url: string }): GitHubUser {
+function mapUser(user: { login: string }): GitHubUser {
   return {
     login: user.login,
-    id: user.id,
-    avatarUrl: user.avatar_url,
-    url: user.html_url,
   };
 }
 
@@ -206,6 +203,9 @@ async function fetchComments(
     per_page: 100,
   })) {
     for (const comment of response.data) {
+      // Check if this is a suggested change (contains ```suggestion block)
+      const isSuggestion = /```suggestion\b/.test(comment.body);
+
       const mappedComment: Comment = {
         id: comment.id,
         body: comment.body,
@@ -215,6 +215,8 @@ async function fetchComments(
         type: 'review',
         path: comment.path,
         line: comment.line || comment.original_line,
+        diffHunk: comment.diff_hunk,
+        isSuggestion,
       };
 
       // Track trigger comment even if from bot

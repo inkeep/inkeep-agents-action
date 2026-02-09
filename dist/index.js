@@ -25560,10 +25560,7 @@ minimatch.unescape = unescape;
 // src/github/pr.ts
 function mapUser(user) {
   return {
-    login: user.login,
-    id: user.id,
-    avatarUrl: user.avatar_url,
-    url: user.html_url
+    login: user.login
   };
 }
 function isBot(login) {
@@ -25672,6 +25669,7 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
     per_page: 100
   })) {
     for (const comment of response.data) {
+      const isSuggestion = /```suggestion\b/.test(comment.body);
       const mappedComment = {
         id: comment.id,
         body: comment.body,
@@ -25680,7 +25678,9 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         updatedAt: comment.updated_at,
         type: "review",
         path: comment.path,
-        line: comment.line || comment.original_line
+        line: comment.line || comment.original_line,
+        diffHunk: comment.diff_hunk,
+        isSuggestion
       };
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
@@ -29820,10 +29820,7 @@ var NEVER = INVALID;
 
 // src/types/payload.ts
 var GitHubUserSchema = external_exports.object({
-  login: external_exports.string(),
-  id: external_exports.number(),
-  avatarUrl: external_exports.string().url(),
-  url: external_exports.string().url()
+  login: external_exports.string()
 });
 var RepositorySchema = external_exports.object({
   owner: external_exports.string(),
@@ -29871,6 +29868,10 @@ var CommentSchema = external_exports.object({
   // For review comments (inline code comments)
   path: external_exports.string().optional(),
   line: external_exports.number().optional(),
+  diffHunk: external_exports.string().optional(),
+  // Surrounding diff context for inline comments
+  isSuggestion: external_exports.boolean().optional(),
+  // True if comment contains a GitHub suggested change
   // For review summaries
   state: external_exports.enum(["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]).optional()
 });
