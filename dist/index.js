@@ -25566,6 +25566,21 @@ function mapUser(user) {
 function isBot(login) {
   return login.endsWith("[bot]");
 }
+function mapReactions(reactions) {
+  if (reactions.total_count === 0) {
+    return void 0;
+  }
+  const mapped = {};
+  if (reactions["+1"] > 0) mapped["+1"] = reactions["+1"];
+  if (reactions["-1"] > 0) mapped["-1"] = reactions["-1"];
+  if (reactions.laugh > 0) mapped.laugh = reactions.laugh;
+  if (reactions.hooray > 0) mapped.hooray = reactions.hooray;
+  if (reactions.confused > 0) mapped.confused = reactions.confused;
+  if (reactions.heart > 0) mapped.heart = reactions.heart;
+  if (reactions.rocket > 0) mapped.rocket = reactions.rocket;
+  if (reactions.eyes > 0) mapped.eyes = reactions.eyes;
+  return mapped;
+}
 async function fetchPullRequest(octokit, owner, repo, prNumber) {
   core3.info(`Fetching PR #${prNumber} details`);
   const { data: pr } = await octokit.rest.pulls.get({
@@ -25651,7 +25666,8 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         author: mapUser(comment.user),
         createdAt: comment.created_at,
         updatedAt: comment.updated_at,
-        type: "issue"
+        type: "issue",
+        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {}
       };
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
@@ -25680,7 +25696,8 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         path: comment.path,
         line: comment.line || comment.original_line,
         diffHunk: comment.diff_hunk,
-        isSuggestion
+        isSuggestion,
+        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {}
       };
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
@@ -29858,6 +29875,16 @@ var ChangedFileSchema = external_exports.object({
   contents: external_exports.string().optional()
   // Only if include-file-contents is true
 });
+var ReactionsSchema = external_exports.object({
+  "+1": external_exports.number().optional(),
+  "-1": external_exports.number().optional(),
+  laugh: external_exports.number().optional(),
+  hooray: external_exports.number().optional(),
+  confused: external_exports.number().optional(),
+  heart: external_exports.number().optional(),
+  rocket: external_exports.number().optional(),
+  eyes: external_exports.number().optional()
+});
 var CommentSchema = external_exports.object({
   id: external_exports.number(),
   body: external_exports.string(),
@@ -29873,7 +29900,9 @@ var CommentSchema = external_exports.object({
   isSuggestion: external_exports.boolean().optional(),
   // True if comment contains a GitHub suggested change
   // For review summaries
-  state: external_exports.enum(["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]).optional()
+  state: external_exports.enum(["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"]).optional(),
+  // Emoji reactions
+  reactions: ReactionsSchema.optional()
 });
 var GitHubEventSchema = external_exports.object({
   type: external_exports.string(),

@@ -45,6 +45,17 @@ export const ChangedFileSchema = z.object({
   contents: z.string().optional(), // Only if include-file-contents is true
 });
 
+export const ReactionsSchema = z.object({
+  '+1': z.number().optional(),
+  '-1': z.number().optional(),
+  laugh: z.number().optional(),
+  hooray: z.number().optional(),
+  confused: z.number().optional(),
+  heart: z.number().optional(),
+  rocket: z.number().optional(),
+  eyes: z.number().optional(),
+});
+
 export const CommentSchema = z.object({
   id: z.number(),
   body: z.string(),
@@ -59,6 +70,8 @@ export const CommentSchema = z.object({
   isSuggestion: z.boolean().optional(), // True if comment contains a GitHub suggested change
   // For review summaries
   state: z.enum(['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED', 'PENDING']).optional(),
+  // Emoji reactions
+  reactions: ReactionsSchema.optional(),
 });
 
 export const GitHubEventSchema = z.object({
@@ -87,6 +100,7 @@ export type GitHubUser = z.infer<typeof GitHubUserSchema>;
 export type Repository = z.infer<typeof RepositorySchema>;
 export type PullRequest = z.infer<typeof PullRequestSchema>;
 export type ChangedFile = z.infer<typeof ChangedFileSchema>;
+export type Reactions = z.infer<typeof ReactionsSchema>;
 export type Comment = z.infer<typeof CommentSchema>;
 export type GitHubEvent = z.infer<typeof GitHubEventSchema>;
 export type TriggerPayload = z.infer<typeof TriggerPayloadSchema>;

@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { minimatch } from 'minimatch';
-import type { PullRequest, ChangedFile, Comment, GitHubUser } from '../types/index.js';
+import type { PullRequest, ChangedFile, Comment, GitHubUser, Reactions } from '../types/index.js';
 
 type Octokit = ReturnType<typeof github.getOctokit>;
 
@@ -20,6 +20,36 @@ function mapUser(user: { login: string }): GitHubUser {
 
 function isBot(login: string): boolean {
   return login.endsWith('[bot]');
+}
+
+function mapReactions(reactions: {
+  total_count: number;
+  '+1': number;
+  '-1': number;
+  laugh: number;
+  hooray: number;
+  confused: number;
+  heart: number;
+  rocket: number;
+  eyes: number;
+}): Reactions | undefined {
+  // Skip if no reactions
+  if (reactions.total_count === 0) {
+    return undefined;
+  }
+
+  // Only include reactions with count > 0
+  const mapped: Reactions = {};
+  if (reactions['+1'] > 0) mapped['+1'] = reactions['+1'];
+  if (reactions['-1'] > 0) mapped['-1'] = reactions['-1'];
+  if (reactions.laugh > 0) mapped.laugh = reactions.laugh;
+  if (reactions.hooray > 0) mapped.hooray = reactions.hooray;
+  if (reactions.confused > 0) mapped.confused = reactions.confused;
+  if (reactions.heart > 0) mapped.heart = reactions.heart;
+  if (reactions.rocket > 0) mapped.rocket = reactions.rocket;
+  if (reactions.eyes > 0) mapped.eyes = reactions.eyes;
+
+  return mapped;
 }
 
 /**
@@ -179,6 +209,7 @@ async function fetchComments(
         createdAt: comment.created_at,
         updatedAt: comment.updated_at,
         type: 'issue',
+        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {},
       };
 
       // Track trigger comment even if from bot
@@ -217,6 +248,7 @@ async function fetchComments(
         line: comment.line || comment.original_line,
         diffHunk: comment.diff_hunk,
         isSuggestion,
+        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {},
       };
 
       // Track trigger comment even if from bot
