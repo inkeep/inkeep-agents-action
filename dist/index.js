@@ -24095,7 +24095,7 @@ var core5 = __toESM(require_core());
 
 // src/auth/token.ts
 var core = __toESM(require_core());
-var DEFAULT_API_BASE_URL = "https://api.pilot.inkeep.com";
+var DEFAULT_API_BASE_URL = "https://api.agents.inkeep.com";
 var TOKEN_EXCHANGE_PATH = "/work-apps/github/token-exchange";
 var OIDC_AUDIENCE = "inkeep-agents-action";
 async function getGitHubToken(projectId, overrideToken, apiBaseUrl) {
@@ -25566,20 +25566,41 @@ function mapUser(user) {
 function isBot(login) {
   return login.endsWith("[bot]");
 }
-function mapReactions(reactions) {
-  if (reactions.total_count === 0) {
-    return void 0;
+async function fetchIssueCommentReactions(octokit, owner, repo, commentId) {
+  const reactions = [];
+  for await (const response of octokit.paginate.iterator(octokit.rest.reactions.listForIssueComment, {
+    owner,
+    repo,
+    comment_id: commentId,
+    per_page: 100
+  })) {
+    for (const reaction of response.data) {
+      reactions.push({
+        user: reaction.user.login,
+        content: reaction.content,
+        createdAt: reaction.created_at
+      });
+    }
   }
-  const mapped = {};
-  if (reactions["+1"] > 0) mapped["+1"] = reactions["+1"];
-  if (reactions["-1"] > 0) mapped["-1"] = reactions["-1"];
-  if (reactions.laugh > 0) mapped.laugh = reactions.laugh;
-  if (reactions.hooray > 0) mapped.hooray = reactions.hooray;
-  if (reactions.confused > 0) mapped.confused = reactions.confused;
-  if (reactions.heart > 0) mapped.heart = reactions.heart;
-  if (reactions.rocket > 0) mapped.rocket = reactions.rocket;
-  if (reactions.eyes > 0) mapped.eyes = reactions.eyes;
-  return mapped;
+  return reactions;
+}
+async function fetchReviewCommentReactions(octokit, owner, repo, commentId) {
+  const reactions = [];
+  for await (const response of octokit.paginate.iterator(octokit.rest.reactions.listForPullRequestReviewComment, {
+    owner,
+    repo,
+    comment_id: commentId,
+    per_page: 100
+  })) {
+    for (const reaction of response.data) {
+      reactions.push({
+        user: reaction.user.login,
+        content: reaction.content,
+        createdAt: reaction.created_at
+      });
+    }
+  }
+  return reactions;
 }
 async function fetchPullRequest(octokit, owner, repo, prNumber) {
   core3.info(`Fetching PR #${prNumber} details`);
@@ -25660,6 +25681,10 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
     per_page: 100
   })) {
     for (const comment of response.data) {
+      let reactions;
+      if (comment.reactions && comment.reactions.total_count > 0) {
+        reactions = await fetchIssueCommentReactions(octokit, owner, repo, comment.id);
+      }
       const mappedComment = {
         id: comment.id,
         body: comment.body || "",
@@ -25667,7 +25692,7 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         createdAt: comment.created_at,
         updatedAt: comment.updated_at,
         type: "issue",
-        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {}
+        reactions
       };
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
@@ -25686,6 +25711,10 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
   })) {
     for (const comment of response.data) {
       const isSuggestion = /```suggestion\b/.test(comment.body);
+      let reactions;
+      if (comment.reactions && comment.reactions.total_count > 0) {
+        reactions = await fetchReviewCommentReactions(octokit, owner, repo, comment.id);
+      }
       const mappedComment = {
         id: comment.id,
         body: comment.body,
@@ -25697,7 +25726,7 @@ async function fetchComments(octokit, owner, repo, prNumber, triggerCommentId) {
         line: comment.line || comment.original_line,
         diffHunk: comment.diff_hunk,
         isSuggestion,
-        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {}
+        reactions
       };
       if (triggerCommentId && comment.id === triggerCommentId) {
         triggerComment = mappedComment;
@@ -29875,16 +29904,13 @@ var ChangedFileSchema = external_exports.object({
   contents: external_exports.string().optional()
   // Only if include-file-contents is true
 });
-var ReactionsSchema = external_exports.object({
-  "+1": external_exports.number().optional(),
-  "-1": external_exports.number().optional(),
-  laugh: external_exports.number().optional(),
-  hooray: external_exports.number().optional(),
-  confused: external_exports.number().optional(),
-  heart: external_exports.number().optional(),
-  rocket: external_exports.number().optional(),
-  eyes: external_exports.number().optional()
+var ReactionSchema = external_exports.object({
+  user: external_exports.string(),
+  // Just the login
+  content: external_exports.enum(["+1", "-1", "laugh", "hooray", "confused", "heart", "rocket", "eyes"]),
+  createdAt: external_exports.string()
 });
+var ReactionsSchema = external_exports.array(ReactionSchema);
 var CommentSchema = external_exports.object({
   id: external_exports.number(),
   body: external_exports.string(),

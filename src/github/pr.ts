@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { minimatch } from 'minimatch';
-import type { PullRequest, ChangedFile, Comment, GitHubUser, Reactions } from '../types/index.js';
+import type { PullRequest, ChangedFile, Comment, GitHubUser, Reactions, Reaction } from '../types/index.js';
 
 type Octokit = ReturnType<typeof github.getOctokit>;
 
@@ -22,34 +22,62 @@ function isBot(login: string): boolean {
   return login.endsWith('[bot]');
 }
 
-function mapReactions(reactions: {
-  total_count: number;
-  '+1': number;
-  '-1': number;
-  laugh: number;
-  hooray: number;
-  confused: number;
-  heart: number;
-  rocket: number;
-  eyes: number;
-}): Reactions | undefined {
-  // Skip if no reactions
-  if (reactions.total_count === 0) {
-    return undefined;
+/**
+ * Fetch detailed reactions for an issue comment (with user attribution)
+ */
+async function fetchIssueCommentReactions(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  commentId: number
+): Promise<Reactions> {
+  const reactions: Reactions = [];
+  
+  for await (const response of octokit.paginate.iterator(octokit.rest.reactions.listForIssueComment, {
+    owner,
+    repo,
+    comment_id: commentId,
+    per_page: 100,
+  })) {
+    for (const reaction of response.data) {
+      reactions.push({
+        user: reaction.user!.login,
+        content: reaction.content as Reaction['content'],
+        createdAt: reaction.created_at,
+      });
+    }
   }
+  
+  return reactions;
+}
 
-  // Only include reactions with count > 0
-  const mapped: Reactions = {};
-  if (reactions['+1'] > 0) mapped['+1'] = reactions['+1'];
-  if (reactions['-1'] > 0) mapped['-1'] = reactions['-1'];
-  if (reactions.laugh > 0) mapped.laugh = reactions.laugh;
-  if (reactions.hooray > 0) mapped.hooray = reactions.hooray;
-  if (reactions.confused > 0) mapped.confused = reactions.confused;
-  if (reactions.heart > 0) mapped.heart = reactions.heart;
-  if (reactions.rocket > 0) mapped.rocket = reactions.rocket;
-  if (reactions.eyes > 0) mapped.eyes = reactions.eyes;
-
-  return mapped;
+/**
+ * Fetch detailed reactions for a pull request review comment (with user attribution)
+ */
+async function fetchReviewCommentReactions(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  commentId: number
+): Promise<Reactions> {
+  const reactions: Reactions = [];
+  
+  for await (const response of octokit.paginate.iterator(octokit.rest.reactions.listForPullRequestReviewComment, {
+    owner,
+    repo,
+    comment_id: commentId,
+    per_page: 100,
+  })) {
+    for (const reaction of response.data) {
+      reactions.push({
+        user: reaction.user!.login,
+        content: reaction.content as Reaction['content'],
+        createdAt: reaction.created_at,
+      });
+    }
+  }
+  
+  return reactions;
 }
 
 /**
@@ -202,6 +230,12 @@ async function fetchComments(
     per_page: 100,
   })) {
     for (const comment of response.data) {
+      // Fetch detailed reactions if there are any
+      let reactions: Reactions | undefined;
+      if (comment.reactions && comment.reactions.total_count > 0) {
+        reactions = await fetchIssueCommentReactions(octokit, owner, repo, comment.id);
+      }
+
       const mappedComment: Comment = {
         id: comment.id,
         body: comment.body || '',
@@ -209,7 +243,7 @@ async function fetchComments(
         createdAt: comment.created_at,
         updatedAt: comment.updated_at,
         type: 'issue',
-        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {},
+        reactions,
       };
 
       // Track trigger comment even if from bot
@@ -237,6 +271,12 @@ async function fetchComments(
       // Check if this is a suggested change (contains ```suggestion block)
       const isSuggestion = /```suggestion\b/.test(comment.body);
 
+      // Fetch detailed reactions if there are any
+      let reactions: Reactions | undefined;
+      if (comment.reactions && comment.reactions.total_count > 0) {
+        reactions = await fetchReviewCommentReactions(octokit, owner, repo, comment.id);
+      }
+
       const mappedComment: Comment = {
         id: comment.id,
         body: comment.body,
@@ -248,7 +288,7 @@ async function fetchComments(
         line: comment.line || comment.original_line,
         diffHunk: comment.diff_hunk,
         isSuggestion,
-        reactions: comment.reactions ? mapReactions(comment.reactions) ?? {} : {},
+        reactions,
       };
 
       // Track trigger comment even if from bot
