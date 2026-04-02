@@ -24095,7 +24095,7 @@ var core5 = __toESM(require_core());
 
 // src/auth/token.ts
 var core = __toESM(require_core());
-var DEFAULT_API_BASE_URL = "https://api.pilot.inkeep.com";
+var DEFAULT_API_BASE_URL = "https://api.agents.inkeep.com";
 var TOKEN_EXCHANGE_PATH = "/work-apps/github/token-exchange";
 var OIDC_AUDIENCE = "inkeep-agents-action";
 async function getGitHubToken(projectId, overrideToken, apiBaseUrl) {

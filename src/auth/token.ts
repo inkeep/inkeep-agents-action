@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 
-const DEFAULT_API_BASE_URL = 'https://api.pilot.inkeep.com';
+const DEFAULT_API_BASE_URL = 'https://api.agents.inkeep.com';
 const TOKEN_EXCHANGE_PATH = '/work-apps/github/token-exchange';
 const OIDC_AUDIENCE = 'inkeep-agents-action';
 
