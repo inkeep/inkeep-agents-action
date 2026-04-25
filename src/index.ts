@@ -1,9 +1,30 @@
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 import { getGitHubToken, getProjectIdFromTriggerUrl } from './auth/token.js';
 import { parseEventContext } from './github/context.js';
 import { fetchPRContext, checkBotPRExists } from './github/pr.js';
 import { sendTrigger } from './trigger/client.js';
 import type { TriggerPayload } from './types/index.js';
+
+const ALLOWED_TRIGGER_PERMISSIONS = new Set(['admin', 'write']);
+
+async function hasTriggerPermission(
+  token: string,
+  owner: string,
+  repo: string,
+  actor: string
+): Promise<boolean> {
+  const octokit = github.getOctokit(token);
+  const { data } = await octokit.rest.repos.getCollaboratorPermissionLevel({
+    owner,
+    repo,
+    username: actor,
+  });
+
+  core.info(`Actor ${actor} has repository permission: ${data.permission}`);
+
+  return ALLOWED_TRIGGER_PERMISSIONS.has(data.permission);
+}
 
 async function run(): Promise<void> {
   try {
@@ -27,6 +48,20 @@ async function run(): Promise<void> {
 
     // Get GitHub token (via OIDC or override)
     const githubToken = await getGitHubToken(projectId, githubTokenOverride, apiBaseUrl);
+
+    const actorCanTrigger = await hasTriggerPermission(
+      githubToken,
+      eventContext.repository.owner,
+      eventContext.repository.name,
+      eventContext.sender.login
+    );
+
+    if (!actorCanTrigger) {
+      core.info(`Actor ${eventContext.sender.login} does not have permission to trigger this action. Skipping trigger.`);
+      core.setOutput('skipped', 'true');
+      core.setOutput('skip-reason', 'insufficient-permission');
+      return;
+    }
 
     // Check if bot has already created a PR referencing this one
     const existingBotPR = await checkBotPRExists(

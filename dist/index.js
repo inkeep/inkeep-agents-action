@@ -23874,11 +23874,11 @@ var require_github = __commonJS({
     var Context = __importStar(require_context());
     var utils_1 = require_utils4();
     exports2.context = new Context.Context();
-    function getOctokit2(token, options, ...additionalPlugins) {
+    function getOctokit3(token, options, ...additionalPlugins) {
       const GitHubWithPlugins = utils_1.GitHub.plugin(...additionalPlugins);
       return new GitHubWithPlugins((0, utils_1.getOctokitOptions)(token, options));
     }
-    exports2.getOctokit = getOctokit2;
+    exports2.getOctokit = getOctokit3;
   }
 });
 
@@ -24092,6 +24092,7 @@ var require_brace_expansion = __commonJS({
 
 // src/index.ts
 var core5 = __toESM(require_core());
+var github3 = __toESM(require_github());
 
 // src/auth/token.ts
 var core = __toESM(require_core());
@@ -30001,6 +30002,17 @@ URL: ${sanitizedUrl.toString()}`
 }
 
 // src/index.ts
+var ALLOWED_TRIGGER_PERMISSIONS = /* @__PURE__ */ new Set(["admin", "write"]);
+async function hasTriggerPermission(token, owner, repo, actor) {
+  const octokit = github3.getOctokit(token);
+  const { data } = await octokit.rest.repos.getCollaboratorPermissionLevel({
+    owner,
+    repo,
+    username: actor
+  });
+  core5.info(`Actor ${actor} has repository permission: ${data.permission}`);
+  return ALLOWED_TRIGGER_PERMISSIONS.has(data.permission);
+}
 async function run() {
   try {
     const triggerUrl = core5.getInput("trigger-url", { required: true });
@@ -30016,6 +30028,18 @@ async function run() {
     );
     const projectId = getProjectIdFromTriggerUrl(triggerUrl);
     const githubToken = await getGitHubToken(projectId, githubTokenOverride, apiBaseUrl);
+    const actorCanTrigger = await hasTriggerPermission(
+      githubToken,
+      eventContext.repository.owner,
+      eventContext.repository.name,
+      eventContext.sender.login
+    );
+    if (!actorCanTrigger) {
+      core5.info(`Actor ${eventContext.sender.login} does not have permission to trigger this action. Skipping trigger.`);
+      core5.setOutput("skipped", "true");
+      core5.setOutput("skip-reason", "insufficient-permission");
+      return;
+    }
     const existingBotPR = await checkBotPRExists(
       githubToken,
       eventContext.repository.owner,

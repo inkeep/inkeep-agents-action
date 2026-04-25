@@ -57,9 +57,6 @@ export async function parseEventContext(): Promise<EventContext> {
 
   const sender: GitHubUser = {
     login: senderData.login,
-    id: senderData.id,
-    avatarUrl: senderData.avatar_url,
-    url: senderData.html_url,
   };
 
   // Determine PR number based on event type
