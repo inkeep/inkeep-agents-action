@@ -19740,10 +19740,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.error = error;
-    function warning3(message, properties = {}) {
+    function warning4(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.warning = warning3;
+    exports2.warning = warning4;
     function notice(message, properties = {}) {
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
@@ -30033,7 +30033,10 @@ async function run() {
       eventContext.sender.login
     );
     if (!actorCanTrigger) {
-      core5.info(`Actor ${eventContext.sender.login} does not have permission to trigger this action. Skipping trigger.`);
+      core5.warning(
+        `${eventContext.sender.login} needs write or admin access to this repository to trigger the Inkeep agent. Skipping trigger.`,
+        { title: "Inkeep agent not triggered" }
+      );
       core5.setOutput("skipped", "true");
       core5.setOutput("skip-reason", "insufficient-permission");
       return;
