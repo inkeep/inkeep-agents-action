@@ -7,6 +7,9 @@ export interface EventContext {
   event: GitHubEvent;
   repository: Repository;
   sender: GitHubUser;
+  // A merge requires write access, so the merge itself authorizes the trigger
+  // even when the sender is a bot like github-merge-queue[bot].
+  isMergedPullRequest: boolean;
   pullRequestNumber: number | null;
   triggerCommentId: number | null;
 }
@@ -93,6 +96,10 @@ export async function parseEventContext(): Promise<EventContext> {
     event: { type: eventName, action },
     repository,
     sender,
+    isMergedPullRequest:
+      eventName === 'pull_request' &&
+      action === 'closed' &&
+      eventPayload.pull_request?.merged === true,
     pullRequestNumber,
     triggerCommentId,
   };
