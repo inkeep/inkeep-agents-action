@@ -24187,10 +24187,7 @@ async function parseEventContext() {
     throw new Error("Event payload does not contain sender information");
   }
   const sender = {
-    login: senderData.login,
-    id: senderData.id,
-    avatarUrl: senderData.avatar_url,
-    url: senderData.html_url
+    login: senderData.login
   };
   let pullRequestNumber = null;
   let triggerCommentId = null;
@@ -24219,6 +24216,7 @@ async function parseEventContext() {
     event: { type: eventName, action },
     repository,
     sender,
+    isMergedPullRequest: eventName === "pull_request" && action === "closed" && eventPayload.pull_request?.merged === true,
     pullRequestNumber,
     triggerCommentId
   };
@@ -30028,7 +30026,7 @@ async function run() {
     );
     const projectId = getProjectIdFromTriggerUrl(triggerUrl);
     const githubToken = await getGitHubToken(projectId, githubTokenOverride, apiBaseUrl);
-    const actorCanTrigger = await hasTriggerPermission(
+    const actorCanTrigger = eventContext.isMergedPullRequest || await hasTriggerPermission(
       githubToken,
       eventContext.repository.owner,
       eventContext.repository.name,

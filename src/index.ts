@@ -49,12 +49,14 @@ async function run(): Promise<void> {
     // Get GitHub token (via OIDC or override)
     const githubToken = await getGitHubToken(projectId, githubTokenOverride, apiBaseUrl);
 
-    const actorCanTrigger = await hasTriggerPermission(
-      githubToken,
-      eventContext.repository.owner,
-      eventContext.repository.name,
-      eventContext.sender.login
-    );
+    const actorCanTrigger =
+      eventContext.isMergedPullRequest ||
+      (await hasTriggerPermission(
+        githubToken,
+        eventContext.repository.owner,
+        eventContext.repository.name,
+        eventContext.sender.login
+      ));
 
     if (!actorCanTrigger) {
       core.info(`Actor ${eventContext.sender.login} does not have permission to trigger this action. Skipping trigger.`);
