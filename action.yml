@@ -31,6 +31,14 @@ outputs:
     description: 'The trigger invocation ID from the Inkeep API'
   conversation-id:
     description: 'The conversation ID created by the agent'
+  skipped:
+    description: 'Set to "true" when the action exited without triggering the agent'
+  skip-reason:
+    description: 'Why the trigger was skipped: insufficient-permission, bot-pr-exists, no-matching-files, title-no-match, or inkeep-bot-comment'
+  existing-bot-pr-number:
+    description: 'Number of the existing bot PR, when skip-reason is bot-pr-exists'
+  existing-bot-pr-url:
+    description: 'URL of the existing bot PR, when skip-reason is bot-pr-exists'
 
 runs:
   using: 'node20'

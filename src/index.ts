@@ -59,7 +59,10 @@ async function run(): Promise<void> {
       ));
 
     if (!actorCanTrigger) {
-      core.info(`Actor ${eventContext.sender.login} does not have permission to trigger this action. Skipping trigger.`);
+      core.warning(
+        `${eventContext.sender.login} needs write or admin access to this repository to trigger the Inkeep agent. Skipping trigger.`,
+        { title: 'Inkeep agent not triggered' }
+      );
       core.setOutput('skipped', 'true');
       core.setOutput('skip-reason', 'insufficient-permission');
       return;
